@@ -93,6 +93,21 @@ except urllib.error.HTTPError as e:
 
 # 2. Upload Zip Asset
 upload_url_with_name = f"{upload_url}?name={zip_file}"
+
+# Kiểm tra nếu asset đã tồn tại thì xóa trước
+assets = release_data.get("assets", [])
+for a in assets:
+    if a.get("name") == zip_file:
+        del_req = urllib.request.Request(
+            a.get("url"),
+            headers={"Authorization": f"Bearer {token}", "User-Agent": "SnapMaster-Release"},
+            method="DELETE"
+        )
+        try:
+            urllib.request.urlopen(del_req)
+        except Exception:
+            pass
+
 with open(zip_file, "rb") as f:
     zip_data = f.read()
 
@@ -110,8 +125,9 @@ req_upload = urllib.request.Request(
 
 with urllib.request.urlopen(req_upload) as resp:
     asset_data = json.loads(resp.read().decode())
+    dl_url = asset_data.get("browser_download_url", "")
     print("✅ Đã upload thành công SnapMaster.zip vào GitHub Release!")
-    print(f"🔗 Download URL: {asset_data.get(\"browser_download_url\")}")
+    print(f"🔗 Download URL: {dl_url}")
 '
 
 rm -f "$ZIP_NAME"
