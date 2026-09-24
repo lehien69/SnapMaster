@@ -67,6 +67,7 @@ final class L10n {
         case menuHistory
         case menuOpenFolder
         case menuSettings
+        case menuCheckUpdates
         case menuQuit
         
         // MARK: - Settings General
@@ -152,6 +153,24 @@ final class L10n {
         case editorNoText
         case editorCopiedChars(Int)
         
+        // MARK: - Auto Update
+        case sectionSoftwareUpdate
+        case toggleAutoCheckUpdates
+        case buttonCheckUpdatesNow
+        case labelCurrentVersion(String)
+        case updateModalTitle
+        case updateAvailableHeader(String)
+        case updateCurrentVersionInfo(String)
+        case updateReleaseNotes
+        case updateButtonNow
+        case updateButtonLater
+        case updateDownloading
+        case updateInstalling
+        case updateUpToDateTitle
+        case updateUpToDateMessage(String)
+        case updateCheckFailedTitle
+        case updateCheckFailedMessage
+        
         func localized(for lang: AppLanguage) -> String {
             switch lang {
             case .vietnamese:
@@ -167,6 +186,7 @@ final class L10n {
                 case .menuHistory: return "Lịch sử hoạt động (History)..."
                 case .menuOpenFolder: return "Mở thư mục ảnh..."
                 case .menuSettings: return "Cài đặt & Cá nhân hóa..."
+                case .menuCheckUpdates: return "Kiểm tra bản cập nhật..."
                 case .menuQuit: return "Thoát SnapMaster"
                     
                 // Settings General
@@ -251,6 +271,24 @@ final class L10n {
                 case .editorSavedImage: return "Đã lưu ảnh vào thư mục SnapMaster!"
                 case .editorNoText: return "Không phát hiện chữ trên ảnh."
                 case .editorCopiedChars(let count): return "Đã sao chép \(count) ký tự từ ảnh!"
+                
+                // Auto Update
+                case .sectionSoftwareUpdate: return "Cập nhật ứng dụng"
+                case .toggleAutoCheckUpdates: return "Tự động kiểm tra bản cập nhật khi khởi động"
+                case .buttonCheckUpdatesNow: return "Kiểm tra cập nhật ngay..."
+                case .labelCurrentVersion(let v): return "Phiên bản hiện tại: v\(v)"
+                case .updateModalTitle: return "Cập nhật SnapMaster"
+                case .updateAvailableHeader(let v): return "Đã có bản cập nhật mới: \(v)"
+                case .updateCurrentVersionInfo(let v): return "Phiên bản bạn đang dùng: v\(v)"
+                case .updateReleaseNotes: return "Nội dung cập nhật mới:"
+                case .updateButtonNow: return "Tải & Cập nhật ngay"
+                case .updateButtonLater: return "Để sau"
+                case .updateDownloading: return "Đang tải bản cập nhật..."
+                case .updateInstalling: return "Đang cài đặt và khởi động lại..."
+                case .updateUpToDateTitle: return "Bạn đang dùng phiên bản mới nhất"
+                case .updateUpToDateMessage(let v): return "SnapMaster v\(v) là phiên bản mới nhất hiện có."
+                case .updateCheckFailedTitle: return "Kiểm tra cập nhật thất bại"
+                case .updateCheckFailedMessage: return "Không thể kết nối đến máy chủ GitHub để kiểm tra bản cập nhật. Vui lòng thử lại sau."
                 }
                 
             case .english:
@@ -266,6 +304,7 @@ final class L10n {
                 case .menuHistory: return "History..."
                 case .menuOpenFolder: return "Open Screenshots Folder..."
                 case .menuSettings: return "Settings & Preferences..."
+                case .menuCheckUpdates: return "Check for Updates..."
                 case .menuQuit: return "Quit SnapMaster"
                     
                 // Settings General
@@ -350,6 +389,24 @@ final class L10n {
                 case .editorSavedImage: return "Image saved to SnapMaster folder!"
                 case .editorNoText: return "No text detected in image."
                 case .editorCopiedChars(let count): return "Copied \(count) characters from image!"
+                
+                // Auto Update
+                case .sectionSoftwareUpdate: return "Software Update"
+                case .toggleAutoCheckUpdates: return "Automatically check for updates on startup"
+                case .buttonCheckUpdatesNow: return "Check for Updates Now..."
+                case .labelCurrentVersion(let v): return "Current version: v\(v)"
+                case .updateModalTitle: return "SnapMaster Software Update"
+                case .updateAvailableHeader(let v): return "New version available: \(v)"
+                case .updateCurrentVersionInfo(let v): return "Your current version: v\(v)"
+                case .updateReleaseNotes: return "What's new in this release:"
+                case .updateButtonNow: return "Download & Update Now"
+                case .updateButtonLater: return "Later"
+                case .updateDownloading: return "Downloading update..."
+                case .updateInstalling: return "Installing update and relaunching..."
+                case .updateUpToDateTitle: return "You're Up to Date"
+                case .updateUpToDateMessage(let v): return "SnapMaster v\(v) is currently the newest version available."
+                case .updateCheckFailedTitle: return "Update Check Failed"
+                case .updateCheckFailedMessage: return "Could not connect to GitHub update server. Please check your internet connection."
                 }
             }
         }

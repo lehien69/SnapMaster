@@ -60,7 +60,7 @@ struct SettingsView: View {
                 }
                 .tag(2)
         }
-        .frame(width: 530, height: 460)
+        .frame(width: 540, height: 560)
         .padding(20)
         .preferredColorScheme(prefs.appTheme.colorScheme)
     }
@@ -139,6 +139,31 @@ struct SettingsView: View {
                         Text("\(Int(prefs.thumbnailDuration)) \(L10n.tr(.secondsSuffix))")
                             .font(.caption.monospacedDigit())
                             .frame(width: 50)
+                    }
+                }
+                .padding(8)
+            }
+            
+            // Cập nhật ứng dụng
+            GroupBox(label: Text(L10n.tr(.sectionSoftwareUpdate)).bold()) {
+                VStack(alignment: .leading, spacing: 10) {
+                    Toggle(L10n.tr(.toggleAutoCheckUpdates), isOn: $prefs.autoCheckUpdates)
+                    
+                    HStack {
+                        Text(L10n.tr(.labelCurrentVersion(UpdateManager.shared.currentVersion)))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            UpdateManager.shared.checkForUpdates(isUserInitiated: true)
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                                Text(L10n.tr(.buttonCheckUpdatesNow))
+                            }
+                        }
                     }
                 }
                 .padding(8)

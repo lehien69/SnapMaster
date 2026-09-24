@@ -28,6 +28,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         
         // 5. Khởi động ấm mô hình Vision OCR trong nền để không bị lag ở lần quét đầu tiên
         OCRManager.shared.warmUp()
+        
+        // 6. Tự động kiểm tra bản cập nhật nếu bật
+        if PreferencesManager.shared.autoCheckUpdates {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                UpdateManager.shared.checkForUpdates(isUserInitiated: false)
+            }
+        }
     }
     
     // MARK: - Menu Bar Setup

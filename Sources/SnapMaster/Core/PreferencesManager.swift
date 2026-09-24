@@ -22,6 +22,7 @@ final class PreferencesManager: ObservableObject {
         static let beautifyPadding = "snapmaster_beautify_padding"
         static let beautifyCornerRadius = "snapmaster_beautify_corner_radius"
         static let beautifyGradientIndex = "snapmaster_beautify_gradient_index"
+        static let autoCheckUpdates = "snapmaster_auto_check_updates"
     }
     
     @Published var appLanguage: AppLanguage {
@@ -112,6 +113,12 @@ final class PreferencesManager: ObservableObject {
         }
     }
     
+    @Published var autoCheckUpdates: Bool {
+        didSet {
+            defaults.set(autoCheckUpdates, forKey: Keys.autoCheckUpdates)
+        }
+    }
+    
     private init() {
         // Language & Theme Initialization
         if let langStr = defaults.string(forKey: Keys.appLanguage),
@@ -150,6 +157,7 @@ final class PreferencesManager: ObservableObject {
         self.beautifyPadding = defaults.object(forKey: Keys.beautifyPadding) as? Double ?? 32.0
         self.beautifyCornerRadius = defaults.object(forKey: Keys.beautifyCornerRadius) as? Double ?? 16.0
         self.beautifyGradientIndex = defaults.integer(forKey: Keys.beautifyGradientIndex)
+        self.autoCheckUpdates = defaults.object(forKey: Keys.autoCheckUpdates) as? Bool ?? true
         
         createSaveDirectoryIfNeeded()
         applyTheme()

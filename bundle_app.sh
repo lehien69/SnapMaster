@@ -3,12 +3,13 @@ set -e
 
 PROJECT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_NAME="SnapMaster"
+VERSION="${1:-$(cat "$PROJECT_DIR/VERSION" 2>/dev/null || echo "1.0.0")}"
 BUNDLE_DIR="$PROJECT_DIR/$APP_NAME.app"
 CONTENTS_DIR="$BUNDLE_DIR/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
 
-echo "🔨 Đang biên dịch SnapMaster với Swift Release/Debug..."
+echo "🔨 Đang biên dịch SnapMaster (v$VERSION) với Swift Release..."
 cd "$PROJECT_DIR"
 swift build -c release
 
@@ -47,7 +48,7 @@ cat <<EOF > "$CONTENTS_DIR/Info.plist"
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>1.0.0</string>
+    <string>$VERSION</string>
     <key>CFBundleVersion</key>
     <string>1</string>
     <key>LSMinimumSystemVersion</key>

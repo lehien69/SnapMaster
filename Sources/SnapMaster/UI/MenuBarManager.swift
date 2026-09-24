@@ -104,6 +104,11 @@ final class MenuBarManager: NSObject {
         settingsItem.image = NSImage(systemSymbolName: "gearshape", accessibilityDescription: nil)
         menu.addItem(settingsItem)
         
+        let checkUpdatesItem = NSMenuItem(title: L10n.tr(.menuCheckUpdates), action: #selector(checkUpdatesClicked), keyEquivalent: "u")
+        checkUpdatesItem.target = self
+        checkUpdatesItem.image = NSImage(systemSymbolName: "arrow.triangle.2.circlepath", accessibilityDescription: nil)
+        menu.addItem(checkUpdatesItem)
+        
         menu.addItem(NSMenuItem.separator())
         
         // Thoát ứng dụng
@@ -150,6 +155,12 @@ final class MenuBarManager: NSObject {
     
     @objc private func settingsClicked() {
         SettingsWindowController.shared.showWindow()
+    }
+    
+    @objc private func checkUpdatesClicked() {
+        Task { @MainActor in
+            UpdateManager.shared.checkForUpdates(isUserInitiated: true)
+        }
     }
     
     @objc private func quitClicked() {
