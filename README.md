@@ -55,10 +55,17 @@
   - Nút Copy nhanh, Mở liên kết URL, Mở lại trong Editor, Xem trong Finder.
   - Xóa từng mục hoặc **Xóa toàn bộ lịch sử (Clear History)** có xác nhận an toàn.
 
-### 7. ⚙️ Cá nhân hóa (Personalization & Settings)
-- Tùy chỉnh thư mục lưu trữ mặc định (`~/Pictures/SnapMaster`).
-- Bật/tắt Watermark bản quyền cá nhân trên từng ảnh chụp.
-- Cấu hình độ dày nét vẽ, màu sắc ưa thích và hiệu ứng khung viền.
+### 7. ⚙️ Cá nhân hóa & Cài đặt (Personalization & Settings)
+- **Đa ngôn ngữ:** Chuyển đổi tức thời giữa **Tiếng Việt** và **English**.
+- **Tùy biến Theme:** Lựa chọn giữa **Theo hệ thống**, **Sáng (Light)**, và **Tối (Dark)** áp dụng ngay lập tức.
+- **Thư mục lưu trữ:** Tùy chỉnh thư mục lưu mặc định (`~/Pictures/SnapMaster`).
+- **Watermark:** Bật/tắt Watermark bản quyền cá nhân trên từng ảnh chụp.
+- **Làm đẹp ảnh:** Cấu hình độ dày nét vẽ, màu sắc ưa thích và hiệu ứng khung viền.
+
+### 8. 🔄 Tự động cập nhật (Auto-Update via GitHub Releases)
+- Tự động kiểm tra bản cập nhật khi khởi động thông qua GitHub Releases API.
+- Hỗ trợ kiểm tra thủ công từ Menu Bar hoặc trong Cửa sổ Cài đặt.
+- Tự động tải file zip, giải nén và cập nhật trực tiếp tại chỗ (In-Place Update) mà không cần can thiệp thủ công.
 
 ---
 
@@ -92,10 +99,22 @@ Khi mở lần đầu, macOS sẽ hiển thị hộp thoại yêu cầu cấp qu
 
 ---
 
-## 🛠️ Biên dịch và Đóng gói lại (Build from source)
-Nếu bạn thay đổi mã nguồn, chỉ cần chạy script đóng gói tự động:
-```bash
-cd /Users/lehien/Projects/SnapMaster
-./bundle_app.sh
-```
+## 🛠️ Công cụ phát triển & Tự động hóa (Developer Scripts)
+
+1. **Biên dịch & Đóng gói ứng dụng:**
+   ```bash
+   ./bundle_app.sh [version]
+   ```
+
+2. **Tự động đồng bộ lên GitHub:**
+   ```bash
+   ./push.sh "Nội dung commit cập nhật"
+   ```
+
+3. **Phát hành phiên bản mới lên GitHub Releases:**
+   ```bash
+   ./release.sh 1.0.1 "Mô tả tính năng mới của bản 1.0.1"
+   ```
+   *(Script sẽ tự động build, tạo zip, tag git, tạo GitHub Release và upload file `SnapMaster.zip` để tất cả các máy đang cài SnapMaster tự động nhận bản cập nhật).*
+
 File thực thi `.app` sẽ tự động được cập nhật tại `SnapMaster.app`.
