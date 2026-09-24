@@ -185,7 +185,7 @@ final class L10n {
                 case .menuStopRecord: return "⏹ Dừng quay màn hình"
                 case .menuHistory: return "Lịch sử hoạt động (History)..."
                 case .menuOpenFolder: return "Mở thư mục ảnh..."
-                case .menuSettings: return "Cài đặt & Cá nhân hóa..."
+                case .menuSettings: return "Cài đặt..."
                 case .menuCheckUpdates: return "Kiểm tra bản cập nhật..."
                 case .menuQuit: return "Thoát SnapMaster"
                     
@@ -303,7 +303,7 @@ final class L10n {
                 case .menuStopRecord: return "⏹ Stop Recording"
                 case .menuHistory: return "History..."
                 case .menuOpenFolder: return "Open Screenshots Folder..."
-                case .menuSettings: return "Settings & Preferences..."
+                case .menuSettings: return "Settings..."
                 case .menuCheckUpdates: return "Check for Updates..."
                 case .menuQuit: return "Quit SnapMaster"
                     
