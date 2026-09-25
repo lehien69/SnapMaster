@@ -31,7 +31,34 @@ final class EditorViewModel: ObservableObject {
     
     init(image: NSImage) {
         self.baseImage = image
-        self.blurredBaseImage = ImageProcessor.shared.generateObfuscatedImage(from: image, scale: 18.0)
+        self.blurredBaseImage = ImageProcessor.shared.generateObfuscatedImage(from: image)
+    }
+    
+    /// Cắt phần ảnh đã được làm mờ đúng bằng kích thước vùng rect
+    func cropBlurredImage(rect: CGRect, canvasSize: CGSize) -> NSImage? {
+        guard let fullBlurred = blurredBaseImage, canvasSize.width > 0, canvasSize.height > 0 else { return nil }
+        guard let cgImage = fullBlurred.cgImage(forProposedRect: nil, context: nil, hints: nil) ??
+              (fullBlurred.tiffRepresentation.flatMap { NSBitmapImageRep(data: $0)?.cgImage }) else {
+            return nil
+        }
+        
+        let scaleX = CGFloat(cgImage.width) / canvasSize.width
+        let scaleY = CGFloat(cgImage.height) / canvasSize.height
+        
+        let rawCropRect = CGRect(
+            x: rect.origin.x * scaleX,
+            y: rect.origin.y * scaleY,
+            width: rect.width * scaleX,
+            height: rect.height * scaleY
+        )
+        
+        let imageBounds = CGRect(x: 0, y: 0, width: cgImage.width, height: cgImage.height)
+        let cropRect = rawCropRect.intersection(imageBounds)
+        
+        guard !cropRect.isNull && cropRect.width > 0 && cropRect.height > 0 else { return nil }
+        guard let cropped = cgImage.cropping(to: cropRect) else { return nil }
+        
+        return NSImage(cgImage: cropped, size: CGSize(width: cropRect.width / scaleX, height: cropRect.height / scaleY))
     }
     
     var currentNSColor: NSColor {
@@ -485,7 +512,8 @@ struct CanvasOverlayView: View {
     
     var body: some View {
         GeometryReader { geo in
-            ZStack {
+            ZStack(alignment: .topLeading) {
+                // Lớp nhận cử chỉ chuột trong suốt phủ toàn bộ ảnh
                 Color.clear
                     .contentShape(Rectangle())
                     .gesture(
@@ -553,16 +581,18 @@ struct CanvasOverlayView: View {
                             }
                     )
                 
-                // Hiển thị các nét vẽ đã hoàn thành
+                // Hiển thị các nét vẽ đã hoàn thành (không chặn sự kiện chuột)
                 ForEach(viewModel.annotations) { item in
                     AnnotationItemView(
                         item: item,
-                        blurredImage: viewModel.blurredBaseImage,
-                        canvasSize: geo.size
+                        viewModel: viewModel,
+                        canvasSize: geo.size,
+                        isPreview: false
                     )
+                    .allowsHitTesting(false)
                 }
                 
-                // Hiển thị nét vẽ xem trước khi đang kéo chuột
+                // Hiển thị nét vẽ xem trước khi đang kéo chuột (không chặn sự kiện chuột)
                 if let start = viewModel.dragStart, let curr = viewModel.currentDrag, viewModel.currentTool != .pen && viewModel.currentTool != .stepNumber {
                     AnnotationItemView(
                         item: AnnotationItem(
@@ -572,9 +602,11 @@ struct CanvasOverlayView: View {
                             color: viewModel.currentNSColor,
                             lineWidth: viewModel.strokeWidth
                         ),
-                        blurredImage: viewModel.blurredBaseImage,
-                        canvasSize: geo.size
+                        viewModel: viewModel,
+                        canvasSize: geo.size,
+                        isPreview: true
                     )
+                    .allowsHitTesting(false)
                 }
             }
             .onAppear {
@@ -589,8 +621,9 @@ struct CanvasOverlayView: View {
 
 struct AnnotationItemView: View {
     let item: AnnotationItem
-    var blurredImage: NSImage? = nil
+    let viewModel: EditorViewModel
     var canvasSize: CGSize = .zero
+    var isPreview: Bool = false
     
     var body: some View {
         Group {
@@ -624,28 +657,26 @@ struct AnnotationItemView: View {
                     .foregroundColor(Color(nsColor: item.color))
                     .position(item.startPoint)
             case .pixelate:
-                if let blurred = blurredImage, canvasSize.width > 0 && canvasSize.height > 0 {
-                    Image(nsImage: blurred)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: canvasSize.width, height: canvasSize.height)
-                        .mask(
-                            Path { path in
-                                path.addRect(item.rect)
-                            }
-                        )
-                        .overlay(
-                            Path { path in
-                                path.addRect(item.rect)
-                            }
-                            .stroke(Color.white.opacity(0.4), lineWidth: 1)
-                        )
-                } else {
-                    Rectangle()
-                        .fill(Color.black.opacity(0.6))
-                        .frame(width: max(1, item.rect.width), height: max(1, item.rect.height))
-                        .position(x: item.rect.midX, y: item.rect.midY)
+                let cropped = viewModel.cropBlurredImage(rect: item.rect, canvasSize: canvasSize)
+                ZStack {
+                    if let img = cropped {
+                        Image(nsImage: img)
+                            .resizable()
+                    } else {
+                        Rectangle()
+                            .fill(Color.black.opacity(0.35))
+                    }
+                    
+                    if isPreview {
+                        Rectangle()
+                            .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
+                    } else {
+                        Rectangle()
+                            .stroke(Color.white.opacity(0.5), lineWidth: 1)
+                    }
                 }
+                .frame(width: max(1, item.rect.width), height: max(1, item.rect.height))
+                .position(x: item.rect.midX, y: item.rect.midY)
             case .spotlight:
                 Rectangle()
                     .stroke(Color.yellow, lineWidth: 2)

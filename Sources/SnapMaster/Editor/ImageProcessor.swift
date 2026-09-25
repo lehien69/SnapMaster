@@ -44,7 +44,7 @@ final class ImageProcessor {
     private init() {}
     
     /// Tạo bản sao làm mờ / pixelate toàn phần của ảnh để phục vụ tính năng Che mờ theo vùng
-    func generateObfuscatedImage(from image: NSImage, scale: CGFloat = 18.0) -> NSImage? {
+    func generateObfuscatedImage(from image: NSImage, scale: CGFloat? = nil) -> NSImage? {
         guard let cgImage = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else {
             guard let tiff = image.tiffRepresentation,
                   let rep = NSBitmapImageRep(data: tiff),
@@ -54,14 +54,16 @@ final class ImageProcessor {
         return applyBlurPipeline(to: cgImage, size: image.size, scale: scale)
     }
     
-    private func applyBlurPipeline(to cgImage: CGImage, size: NSSize, scale: CGFloat) -> NSImage? {
+    private func applyBlurPipeline(to cgImage: CGImage, size: NSSize, scale: CGFloat?) -> NSImage? {
         let ciImage = CIImage(cgImage: cgImage)
         let clamped = ciImage.clampedToExtent()
+        
+        let pixScale = scale ?? max(20.0, CGFloat(cgImage.width) / 75.0)
         
         // 1. Pixelate tạo các ô vuông bảo mật
         let pixFilter = CIFilter(name: "CIPixellate")
         pixFilter?.setValue(clamped, forKey: kCIInputImageKey)
-        pixFilter?.setValue(scale, forKey: kCIInputScaleKey)
+        pixFilter?.setValue(pixScale, forKey: kCIInputScaleKey)
         
         // 2. Gaussian Blur nhẹ để làm mịn viền các ô
         let blurFilter = CIFilter(name: "CIGaussianBlur")
