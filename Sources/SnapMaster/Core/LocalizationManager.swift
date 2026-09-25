@@ -98,6 +98,9 @@ final class L10n {
         case shortcutQR
         case shortcutHistory
         case shortcutsNote
+        case shortcutResetDefaults
+        case shortcutClickToChange
+        case shortcutRecordPrompt
         
         // MARK: - Settings Personalization
         case sectionWatermark
@@ -217,6 +220,9 @@ final class L10n {
                 case .shortcutQR: return "Quét mã QR / Barcode màn hình"
                 case .shortcutHistory: return "Mở lịch sử (History)"
                 case .shortcutsNote: return "💡 Các phím tắt này hoạt động trên toàn hệ thống ngay cả khi bạn đang mở ứng dụng khác."
+                case .shortcutResetDefaults: return "Đặt lại mặc định"
+                case .shortcutClickToChange: return "Nhấn vào phím tắt để thay đổi. Cần ít nhất 1 phím bổ trợ (⌘, ⌥, ⌃, ⇧)."
+                case .shortcutRecordPrompt: return "Đang ghi nhận: Hãy bấm tổ hợp phím mới... (hoặc ESC để hủy)"
                     
                 // Settings Personalization
                 case .sectionWatermark: return "Watermark (Đóng dấu cá nhân)"
@@ -335,6 +341,9 @@ final class L10n {
                 case .shortcutQR: return "Scan QR / Barcode"
                 case .shortcutHistory: return "Open History"
                 case .shortcutsNote: return "💡 These shortcuts work globally even when you are using other apps."
+                case .shortcutResetDefaults: return "Reset to Defaults"
+                case .shortcutClickToChange: return "Click any shortcut to change it. Requires at least one modifier (⌘, ⌥, ⌃, ⇧)."
+                case .shortcutRecordPrompt: return "Recording: Press new shortcut combo... (or ESC to cancel)"
                     
                 // Settings Personalization
                 case .sectionWatermark: return "Watermark"

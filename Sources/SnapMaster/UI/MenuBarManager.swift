@@ -38,22 +38,26 @@ final class MenuBarManager: NSObject {
     
     func rebuildMenu(isRecording: Bool = false) {
         let menu = NSMenu()
+        let prefs = PreferencesManager.shared
         
         // Nhóm Chụp ảnh
-        let captureAreaItem = NSMenuItem(title: L10n.tr(.menuCaptureArea), action: #selector(captureAreaClicked), keyEquivalent: "1")
-        captureAreaItem.keyEquivalentModifierMask = [.command, .shift]
+        let scArea = prefs.shortcut(for: .captureArea)
+        let captureAreaItem = NSMenuItem(title: L10n.tr(.menuCaptureArea), action: #selector(captureAreaClicked), keyEquivalent: scArea.keyEquivalent)
+        captureAreaItem.keyEquivalentModifierMask = scArea.modifierFlags
         captureAreaItem.target = self
         captureAreaItem.image = NSImage(systemSymbolName: "crop", accessibilityDescription: nil)
         menu.addItem(captureAreaItem)
         
-        let captureFullItem = NSMenuItem(title: L10n.tr(.menuCaptureFull), action: #selector(captureFullClicked), keyEquivalent: "2")
-        captureFullItem.keyEquivalentModifierMask = [.command, .shift]
+        let scFull = prefs.shortcut(for: .captureFullScreen)
+        let captureFullItem = NSMenuItem(title: L10n.tr(.menuCaptureFull), action: #selector(captureFullClicked), keyEquivalent: scFull.keyEquivalent)
+        captureFullItem.keyEquivalentModifierMask = scFull.modifierFlags
         captureFullItem.target = self
         captureFullItem.image = NSImage(systemSymbolName: "macbook.and.iphone", accessibilityDescription: nil)
         menu.addItem(captureFullItem)
         
-        let captureWindowItem = NSMenuItem(title: L10n.tr(.menuCaptureWindow), action: #selector(captureWindowClicked), keyEquivalent: "3")
-        captureWindowItem.keyEquivalentModifierMask = [.command, .shift]
+        let scWindow = prefs.shortcut(for: .captureWindow)
+        let captureWindowItem = NSMenuItem(title: L10n.tr(.menuCaptureWindow), action: #selector(captureWindowClicked), keyEquivalent: scWindow.keyEquivalent)
+        captureWindowItem.keyEquivalentModifierMask = scWindow.modifierFlags
         captureWindowItem.target = self
         captureWindowItem.image = NSImage(systemSymbolName: "uiwindow.split.2x1", accessibilityDescription: nil)
         menu.addItem(captureWindowItem)
@@ -61,14 +65,16 @@ final class MenuBarManager: NSObject {
         menu.addItem(NSMenuItem.separator())
         
         // Nhóm Trích xuất Text & Quét Mã QR
-        let captureTextItem = NSMenuItem(title: L10n.tr(.menuCaptureText), action: #selector(captureTextClicked), keyEquivalent: "5")
-        captureTextItem.keyEquivalentModifierMask = [.command, .shift]
+        let scText = prefs.shortcut(for: .captureText)
+        let captureTextItem = NSMenuItem(title: L10n.tr(.menuCaptureText), action: #selector(captureTextClicked), keyEquivalent: scText.keyEquivalent)
+        captureTextItem.keyEquivalentModifierMask = scText.modifierFlags
         captureTextItem.target = self
         captureTextItem.image = NSImage(systemSymbolName: "text.viewfinder", accessibilityDescription: nil)
         menu.addItem(captureTextItem)
         
-        let scanQRItem = NSMenuItem(title: L10n.tr(.menuScanQR), action: #selector(scanQRClicked), keyEquivalent: "6")
-        scanQRItem.keyEquivalentModifierMask = [.command, .shift]
+        let scQR = prefs.shortcut(for: .scanQR)
+        let scanQRItem = NSMenuItem(title: L10n.tr(.menuScanQR), action: #selector(scanQRClicked), keyEquivalent: scQR.keyEquivalent)
+        scanQRItem.keyEquivalentModifierMask = scQR.modifierFlags
         scanQRItem.target = self
         scanQRItem.image = NSImage(systemSymbolName: "qrcode.viewfinder", accessibilityDescription: nil)
         menu.addItem(scanQRItem)
@@ -76,9 +82,10 @@ final class MenuBarManager: NSObject {
         menu.addItem(NSMenuItem.separator())
         
         // Nhóm Quay video
+        let scRecord = prefs.shortcut(for: .recordScreen)
         let recordTitle = isRecording ? L10n.tr(.menuStopRecord) : L10n.tr(.menuRecord)
-        let recordItem = NSMenuItem(title: recordTitle, action: #selector(recordClicked), keyEquivalent: "4")
-        recordItem.keyEquivalentModifierMask = [.command, .shift]
+        let recordItem = NSMenuItem(title: recordTitle, action: #selector(recordClicked), keyEquivalent: scRecord.keyEquivalent)
+        recordItem.keyEquivalentModifierMask = scRecord.modifierFlags
         recordItem.target = self
         recordItem.image = NSImage(systemSymbolName: isRecording ? "stop.circle.fill" : "record.circle", accessibilityDescription: nil)
         self.recordMenuItem = recordItem
@@ -87,8 +94,9 @@ final class MenuBarManager: NSObject {
         menu.addItem(NSMenuItem.separator())
         
         // Lịch sử hoạt động
-        let historyItem = NSMenuItem(title: L10n.tr(.menuHistory), action: #selector(historyClicked), keyEquivalent: "h")
-        historyItem.keyEquivalentModifierMask = [.command, .shift]
+        let scHistory = prefs.shortcut(for: .openHistory)
+        let historyItem = NSMenuItem(title: L10n.tr(.menuHistory), action: #selector(historyClicked), keyEquivalent: scHistory.keyEquivalent)
+        historyItem.keyEquivalentModifierMask = scHistory.modifierFlags
         historyItem.target = self
         historyItem.image = NSImage(systemSymbolName: "clock.arrow.circlepath", accessibilityDescription: nil)
         menu.addItem(historyItem)

@@ -1,13 +1,14 @@
 import Foundation
 import AppKit
 import SwiftUI
+import Carbon
 
 final class SettingsWindowController: NSWindowController {
     static let shared = SettingsWindowController()
     
     init() {
         let window = NSWindow(
-            contentRect: NSRect(x: 200, y: 200, width: 560, height: 490),
+            contentRect: NSRect(x: 200, y: 200, width: 560, height: 600),
             styleMask: [.titled, .closable, .miniaturizable],
             backing: .buffered,
             defer: false
@@ -34,11 +35,55 @@ final class SettingsWindowController: NSWindowController {
 
 final class SettingsViewState: ObservableObject {
     @Published var selectedTab: Int = 0
+    @Published var recordingAction: HotKeyAction? = nil
+    private var eventMonitor: Any? = nil
+    
+    func startRecording(for action: HotKeyAction, prefs: PreferencesManager) {
+        stopRecording()
+        recordingAction = action
+        
+        eventMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown]) { [weak self] event in
+            guard let self = self else { return event }
+            
+            // Nếu bấm ESC -> huỷ bỏ
+            if event.keyCode == UInt16(kVK_Escape) {
+                DispatchQueue.main.async {
+                    self.stopRecording()
+                }
+                return nil
+            }
+            
+            let carbonMods = KeyboardShortcut.carbonModifiers(from: event.modifierFlags)
+            // Yêu cầu có ít nhất 1 phím bổ trợ (⌘, ⌥, ⌃, ⇧)
+            if carbonMods > 0 {
+                let newShortcut = KeyboardShortcut(keyCode: UInt32(event.keyCode), modifiers: carbonMods)
+                DispatchQueue.main.async {
+                    prefs.setShortcut(newShortcut, for: action)
+                    self.stopRecording()
+                }
+                return nil
+            }
+            
+            return nil
+        }
+    }
+    
+    func stopRecording() {
+        if let monitor = eventMonitor {
+            NSEvent.removeMonitor(monitor)
+            eventMonitor = nil
+        }
+        recordingAction = nil
+    }
+    
+    deinit {
+        stopRecording()
+    }
 }
 
 struct SettingsView: View {
     @ObservedObject var prefs = PreferencesManager.shared
-    @ObservedObject var state = SettingsViewState()
+    @StateObject var state = SettingsViewState()
     
     var body: some View {
         TabView(selection: $state.selectedTab) {
@@ -60,9 +105,15 @@ struct SettingsView: View {
                 }
                 .tag(2)
         }
-        .frame(width: 540, height: 560)
+        .frame(width: 540, height: 600)
         .padding(20)
         .preferredColorScheme(prefs.appTheme.colorScheme)
+        .onChange(of: state.selectedTab) { _ in
+            state.stopRecording()
+        }
+        .onDisappear {
+            state.stopRecording()
+        }
     }
     
     // MARK: - General Settings
@@ -175,22 +226,77 @@ struct SettingsView: View {
     
     // MARK: - Shortcuts Settings
     private var shortcutSettings: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            Text(L10n.tr(.shortcutsHeader))
-                .font(.headline)
+        VStack(alignment: .leading, spacing: 14) {
+            HStack {
+                Text(L10n.tr(.shortcutsHeader))
+                    .font(.headline)
+                
+                Spacer()
+                
+                Button(action: {
+                    state.stopRecording()
+                    prefs.resetShortcutsToDefault()
+                }) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.counterclockwise")
+                        Text(L10n.tr(.shortcutResetDefaults))
+                    }
+                    .font(.caption)
+                }
+            }
             
-            VStack(spacing: 8) {
-                ShortcutRow(title: L10n.tr(.shortcutArea), shortcut: "⌘ ⇧ 1")
-                ShortcutRow(title: L10n.tr(.shortcutFull), shortcut: "⌘ ⇧ 2")
-                ShortcutRow(title: L10n.tr(.shortcutWindow), shortcut: "⌘ ⇧ 3")
-                ShortcutRow(title: L10n.tr(.shortcutRecord), shortcut: "⌘ ⇧ 4")
-                ShortcutRow(title: L10n.tr(.shortcutText), shortcut: "⌘ ⇧ 5")
-                ShortcutRow(title: L10n.tr(.shortcutQR), shortcut: "⌘ ⇧ 6")
-                ShortcutRow(title: L10n.tr(.shortcutHistory), shortcut: "⌘ ⇧ H")
+            Text(L10n.tr(.shortcutClickToChange))
+                .font(.caption)
+                .foregroundColor(.secondary)
+            
+            VStack(spacing: 6) {
+                ForEach(HotKeyAction.allCases) { action in
+                    ShortcutEditRow(
+                        title: action.displayName,
+                        shortcut: prefs.shortcut(for: action),
+                        isRecording: state.recordingAction == action,
+                        onToggleRecord: {
+                            if state.recordingAction == action {
+                                state.stopRecording()
+                            } else {
+                                state.startRecording(for: action, prefs: prefs)
+                            }
+                        }
+                    )
+                    
+                    if action != HotKeyAction.allCases.last {
+                        Divider()
+                    }
+                }
             }
             .padding(12)
             .background(Color(nsColor: .controlBackgroundColor))
             .cornerRadius(8)
+            
+            if state.recordingAction != nil {
+                HStack {
+                    Image(systemName: "record.circle.fill")
+                        .foregroundColor(.red)
+                    Text(L10n.tr(.shortcutRecordPrompt))
+                        .font(.caption)
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Button(action: {
+                        state.stopRecording()
+                    }) {
+                        Text("ESC")
+                            .font(.caption.monospaced().bold())
+                    }
+                    .buttonStyle(BorderedButtonStyle())
+                }
+                .padding(8)
+                .background(Color.accentColor.opacity(0.1))
+                .cornerRadius(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.accentColor.opacity(0.3), lineWidth: 1)
+                )
+            }
             
             Text(L10n.tr(.shortcutsNote))
                 .font(.caption)
@@ -260,25 +366,43 @@ struct SettingsView: View {
     }
 }
 
-struct ShortcutRow: View {
+struct ShortcutEditRow: View {
     let title: String
-    let shortcut: String
+    let shortcut: KeyboardShortcut
+    let isRecording: Bool
+    let onToggleRecord: () -> Void
     
     var body: some View {
         HStack {
             Text(title)
                 .font(.system(size: 13))
+            
             Spacer()
-            Text(shortcut)
-                .font(.system(size: 12, weight: .semibold, design: .monospaced))
-                .padding(.horizontal, 8)
+            
+            Button(action: onToggleRecord) {
+                HStack(spacing: 6) {
+                    if isRecording {
+                        Image(systemName: "record.circle.fill")
+                            .foregroundColor(.red)
+                        Text(L10n.currentLanguage == .vietnamese ? "Bấm tổ hợp phím..." : "Press keys...")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundColor(.accentColor)
+                    } else {
+                        Text(shortcut.displayString)
+                            .font(.system(size: 12, weight: .semibold, design: .monospaced))
+                            .foregroundColor(.primary)
+                    }
+                }
+                .padding(.horizontal, 10)
                 .padding(.vertical, 4)
-                .background(Color(nsColor: .windowBackgroundColor))
+                .background(isRecording ? Color.accentColor.opacity(0.15) : Color(nsColor: .windowBackgroundColor))
                 .cornerRadius(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 6)
-                        .stroke(Color.gray.opacity(0.3), lineWidth: 1)
+                        .stroke(isRecording ? Color.accentColor : Color.gray.opacity(0.3), lineWidth: isRecording ? 1.5 : 1)
                 )
+            }
+            .buttonStyle(PlainButtonStyle())
         }
     }
 }

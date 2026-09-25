@@ -25,6 +25,8 @@ final class PreferencesManager: ObservableObject {
         static let autoCheckUpdates = "snapmaster_auto_check_updates"
     }
     
+    @Published var shortcuts: [HotKeyAction: KeyboardShortcut] = [:]
+    
     @Published var appLanguage: AppLanguage {
         didSet {
             defaults.set(appLanguage.rawValue, forKey: Keys.appLanguage)
@@ -159,8 +161,44 @@ final class PreferencesManager: ObservableObject {
         self.beautifyGradientIndex = defaults.integer(forKey: Keys.beautifyGradientIndex)
         self.autoCheckUpdates = defaults.object(forKey: Keys.autoCheckUpdates) as? Bool ?? true
         
+        // Khởi tạo các phím tắt đã lưu hoặc dùng mặc định
+        var loadedShortcuts: [HotKeyAction: KeyboardShortcut] = [:]
+        for action in HotKeyAction.allCases {
+            if let data = defaults.data(forKey: action.preferenceKey),
+               let saved = try? JSONDecoder().decode(KeyboardShortcut.self, from: data) {
+                loadedShortcuts[action] = saved
+            } else {
+                loadedShortcuts[action] = KeyboardShortcut.defaultShortcut(for: action)
+            }
+        }
+        self.shortcuts = loadedShortcuts
+        
         createSaveDirectoryIfNeeded()
         applyTheme()
+    }
+    
+    // MARK: - Shortcut Management
+    func shortcut(for action: HotKeyAction) -> KeyboardShortcut {
+        shortcuts[action] ?? KeyboardShortcut.defaultShortcut(for: action)
+    }
+    
+    func setShortcut(_ shortcut: KeyboardShortcut, for action: HotKeyAction) {
+        shortcuts[action] = shortcut
+        if let data = try? JSONEncoder().encode(shortcut) {
+            defaults.set(data, forKey: action.preferenceKey)
+        }
+        HotkeyManager.shared.register(action: action, shortcut: shortcut)
+        MenuBarManager.shared.rebuildMenu()
+    }
+    
+    func resetShortcutsToDefault() {
+        for action in HotKeyAction.allCases {
+            let def = KeyboardShortcut.defaultShortcut(for: action)
+            shortcuts[action] = def
+            defaults.removeObject(forKey: action.preferenceKey)
+            HotkeyManager.shared.register(action: action, shortcut: def)
+        }
+        MenuBarManager.shared.rebuildMenu()
     }
     
     /// Áp dụng theme lên toàn bộ giao diện macOS AppKit
