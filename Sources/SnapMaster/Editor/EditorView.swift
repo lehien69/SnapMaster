@@ -4,6 +4,8 @@ import SwiftUI
 
 final class EditorViewModel: ObservableObject {
     @Published var baseImage: NSImage
+    @Published var blurredBaseImage: NSImage?
+    @Published var canvasSize: CGSize = .zero
     @Published var annotations: [AnnotationItem] = []
     @Published var undoneAnnotations: [AnnotationItem] = []
     
@@ -29,6 +31,7 @@ final class EditorViewModel: ObservableObject {
     
     init(image: NSImage) {
         self.baseImage = image
+        self.blurredBaseImage = ImageProcessor.shared.generateObfuscatedImage(from: image, scale: 18.0)
     }
     
     var currentNSColor: NSColor {
@@ -59,27 +62,33 @@ final class EditorViewModel: ObservableObject {
     
     /// Xuất ảnh hoàn chỉnh bao gồm tất cả các nét vẽ và khung nền thẩm mỹ nếu có
     func renderFinalImage() -> NSImage {
-        var canvasImage = baseImage
+        let size = baseImage.size
+        guard size.width > 0 && size.height > 0 else { return baseImage }
         
-        let size = canvasImage.size
-        let rendered = NSImage(size: size)
-        rendered.lockFocus()
+        let scaleX = canvasSize.width > 0 ? (size.width / canvasSize.width) : 1.0
+        let scaleY = canvasSize.height > 0 ? (size.height / canvasSize.height) : 1.0
         
-        guard let context = NSGraphicsContext.current?.cgContext else {
-            rendered.unlockFocus()
-            return canvasImage
+        // Vẽ với hệ tọa độ flipped: true (gốc trên-trái, tương thích 1:1 với SwiftUI)
+        let rendered = NSImage(size: size, flipped: true) { [weak self] bounds in
+            guard let self = self, let context = NSGraphicsContext.current?.cgContext else { return false }
+            
+            // 1. Vẽ ảnh gốc (tự động đúng chiều trong flipped context)
+            self.baseImage.draw(in: bounds)
+            
+            // 2. Vẽ các Annotation lên ảnh
+            for item in self.annotations {
+                self.drawItem(item, in: context, imageSize: size, scaleX: scaleX, scaleY: scaleY)
+            }
+            
+            return true
         }
         
-        // 1. Vẽ ảnh gốc
-        canvasImage.draw(in: CGRect(origin: .zero, size: size))
-        
-        // 2. Vẽ các Annotation lên ảnh
-        for item in annotations {
-            drawItem(item, in: context, imageSize: size)
+        var canvasImage: NSImage = rendered
+        if let tiff = rendered.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff) {
+            let bitmapImage = NSImage(size: size)
+            bitmapImage.addRepresentation(rep)
+            canvasImage = bitmapImage
         }
-        
-        rendered.unlockFocus()
-        canvasImage = rendered
         
         // 3. Nếu bật chế độ làm đẹp (Beautify Framing)
         if isBeautifyEnabled {
@@ -98,41 +107,48 @@ final class EditorViewModel: ObservableObject {
         return canvasImage
     }
     
-    private func drawItem(_ item: AnnotationItem, in context: CGContext, imageSize: CGSize) {
+    private func drawItem(_ item: AnnotationItem, in context: CGContext, imageSize: CGSize, scaleX: CGFloat, scaleY: CGFloat) {
         context.saveGState()
         context.setStrokeColor(item.color.cgColor)
         context.setFillColor(item.color.cgColor)
-        context.setLineWidth(item.lineWidth)
+        context.setLineWidth(max(1.0, item.lineWidth * scaleX))
         context.setLineCap(.round)
         context.setLineJoin(.round)
+        
+        let scaledRect = CGRect(
+            x: item.rect.origin.x * scaleX,
+            y: item.rect.origin.y * scaleY,
+            width: max(1.0, item.rect.size.width * scaleX),
+            height: max(1.0, item.rect.size.height * scaleY)
+        )
         
         switch item.type {
         case .select:
             break
             
         case .arrow:
-            drawArrow(from: item.startPoint, to: item.endPoint, in: context, width: item.lineWidth)
+            let start = CGPoint(x: item.startPoint.x * scaleX, y: item.startPoint.y * scaleY)
+            let end = CGPoint(x: item.endPoint.x * scaleX, y: item.endPoint.y * scaleY)
+            drawArrow(from: start, to: end, in: context, width: max(1.0, item.lineWidth * scaleX))
             
         case .rectangle:
-            let rect = item.rect
-            context.stroke(rect)
+            context.stroke(scaledRect)
             
         case .oval:
-            let rect = item.rect
-            context.strokeEllipse(in: rect)
+            context.strokeEllipse(in: scaledRect)
             
         case .pen:
             guard item.points.count > 1 else { break }
             context.beginPath()
-            context.move(to: item.points[0])
+            context.move(to: CGPoint(x: item.points[0].x * scaleX, y: item.points[0].y * scaleY))
             for pt in item.points.dropFirst() {
-                context.addLine(to: pt)
+                context.addLine(to: CGPoint(x: pt.x * scaleX, y: pt.y * scaleY))
             }
             context.strokePath()
             
         case .stepNumber:
-            let center = item.startPoint
-            let radius: CGFloat = max(14, item.lineWidth * 3.5)
+            let center = CGPoint(x: item.startPoint.x * scaleX, y: item.startPoint.y * scaleY)
+            let radius: CGFloat = max(14 * scaleX, item.lineWidth * 3.5 * scaleX)
             let circleRect = CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2)
             
             // Vẽ vòng tròn nền
@@ -145,38 +161,43 @@ final class EditorViewModel: ObservableObject {
                 .foregroundColor: NSColor.white
             ]
             let textSize = (numText as NSString).size(withAttributes: attr)
-            let textOrigin = CGPoint(x: center.x - textSize.width / 2, y: center.y - textSize.height / 2 + 1)
+            let textOrigin = CGPoint(x: center.x - textSize.width / 2, y: center.y - textSize.height / 2)
             (numText as NSString).draw(at: textOrigin, withAttributes: attr)
             
         case .text:
             let text = item.text.isEmpty ? "Văn bản" : item.text
+            let fontSize = max(16 * scaleX, item.lineWidth * 4 * scaleX)
             let attr: [NSAttributedString.Key: Any] = [
-                .font: NSFont.boldSystemFont(ofSize: max(16, item.lineWidth * 4)),
+                .font: NSFont.boldSystemFont(ofSize: fontSize),
                 .foregroundColor: item.color
             ]
-            (text as NSString).draw(at: item.startPoint, withAttributes: attr)
+            let origin = CGPoint(x: item.startPoint.x * scaleX, y: item.startPoint.y * scaleY)
+            (text as NSString).draw(at: origin, withAttributes: attr)
             
         case .pixelate:
-            // Phủ mờ ô vuông
-            context.setFillColor(NSColor.black.withAlphaComponent(0.6).cgColor)
-            context.fill(item.rect)
-            let patternAttr: [NSAttributedString.Key: Any] = [
-                .font: NSFont.systemFont(ofSize: 11, weight: .bold),
-                .foregroundColor: NSColor.white.withAlphaComponent(0.8)
-            ]
-            let label = "REDACTED"
-            let lSize = (label as NSString).size(withAttributes: patternAttr)
-            (label as NSString).draw(
-                at: CGPoint(x: item.rect.midX - lSize.width / 2, y: item.rect.midY - lSize.height / 2),
-                withAttributes: patternAttr
-            )
+            // Phủ mờ vùng chọn bằng ảnh đã obfuscate thực tế
+            let blurImg = blurredBaseImage ?? ImageProcessor.shared.generateObfuscatedImage(from: baseImage, scale: 18.0)
+            if let blurImg = blurImg {
+                context.saveGState()
+                context.clip(to: scaledRect)
+                blurImg.draw(in: CGRect(origin: .zero, size: imageSize))
+                context.restoreGState()
+                
+                // Viền nhẹ phân tách vùng mờ
+                context.setStrokeColor(NSColor.white.withAlphaComponent(0.3).cgColor)
+                context.setLineWidth(max(1.0, 1.0 * scaleX))
+                context.stroke(scaledRect)
+            } else {
+                context.setFillColor(NSColor.black.withAlphaComponent(0.6).cgColor)
+                context.fill(scaledRect)
+            }
             
         case .spotlight:
             // Vùng spotlight giữ sáng, xung quanh mờ
             context.setFillColor(NSColor.black.withAlphaComponent(0.5).cgColor)
             let path = CGMutablePath()
             path.addRect(CGRect(origin: .zero, size: imageSize))
-            path.addRect(item.rect)
+            path.addRect(scaledRect)
             context.addPath(path)
             context.drawPath(using: .eoFill)
         }
@@ -192,7 +213,7 @@ final class EditorViewModel: ObservableObject {
         
         // Đầu mũi tên
         let angle = atan2(end.y - start.y, end.x - start.x)
-        let arrowLength: CGFloat = max(16, width * 4.0)
+        let arrowLength: CGFloat = max(16.0, width * 4.0)
         let arrowAngle: CGFloat = .pi / 6
         
         let p1 = CGPoint(
@@ -420,10 +441,17 @@ struct EditorView: View {
             Button(action: {
                 let finalImage = viewModel.renderFinalImage()
                 ScreenCaptureManager.shared.copyImageToClipboard(finalImage)
-                viewModel.statusMessage = L10n.tr(.editorCopiedImage)
+                NotificationHUDController.shared.show(
+                    icon: "doc.on.doc.fill",
+                    title: L10n.tr(.editorCopiedImage),
+                    message: "Đã sao chép ảnh vào Clipboard",
+                    isSuccess: true
+                )
+                onClose()
             }) {
                 Label(L10n.tr(.editorCopy), systemImage: "doc.on.doc")
             }
+            .keyboardShortcut("c", modifiers: .command)
             .buttonStyle(BorderedButtonStyle())
             
             // Lưu ảnh
@@ -527,7 +555,11 @@ struct CanvasOverlayView: View {
                 
                 // Hiển thị các nét vẽ đã hoàn thành
                 ForEach(viewModel.annotations) { item in
-                    AnnotationItemView(item: item)
+                    AnnotationItemView(
+                        item: item,
+                        blurredImage: viewModel.blurredBaseImage,
+                        canvasSize: geo.size
+                    )
                 }
                 
                 // Hiển thị nét vẽ xem trước khi đang kéo chuột
@@ -539,9 +571,17 @@ struct CanvasOverlayView: View {
                             endPoint: curr,
                             color: viewModel.currentNSColor,
                             lineWidth: viewModel.strokeWidth
-                        )
+                        ),
+                        blurredImage: viewModel.blurredBaseImage,
+                        canvasSize: geo.size
                     )
                 }
+            }
+            .onAppear {
+                viewModel.canvasSize = geo.size
+            }
+            .onChange(of: geo.size) { newSize in
+                viewModel.canvasSize = newSize
             }
         }
     }
@@ -549,6 +589,8 @@ struct CanvasOverlayView: View {
 
 struct AnnotationItemView: View {
     let item: AnnotationItem
+    var blurredImage: NSImage? = nil
+    var canvasSize: CGSize = .zero
     
     var body: some View {
         Group {
@@ -582,20 +624,32 @@ struct AnnotationItemView: View {
                     .foregroundColor(Color(nsColor: item.color))
                     .position(item.startPoint)
             case .pixelate:
-                Rectangle()
-                    .fill(Color.black.opacity(0.6))
-                    .frame(width: item.rect.width, height: item.rect.height)
-                    .position(x: item.rect.midX, y: item.rect.midY)
-                    .overlay(
-                        Text("REDACTED")
-                            .font(.caption2.bold())
-                            .foregroundColor(.white.opacity(0.8))
-                            .position(x: item.rect.midX, y: item.rect.midY)
-                    )
+                if let blurred = blurredImage, canvasSize.width > 0 && canvasSize.height > 0 {
+                    Image(nsImage: blurred)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: canvasSize.width, height: canvasSize.height)
+                        .mask(
+                            Path { path in
+                                path.addRect(item.rect)
+                            }
+                        )
+                        .overlay(
+                            Path { path in
+                                path.addRect(item.rect)
+                            }
+                            .stroke(Color.white.opacity(0.4), lineWidth: 1)
+                        )
+                } else {
+                    Rectangle()
+                        .fill(Color.black.opacity(0.6))
+                        .frame(width: max(1, item.rect.width), height: max(1, item.rect.height))
+                        .position(x: item.rect.midX, y: item.rect.midY)
+                }
             case .spotlight:
                 Rectangle()
                     .stroke(Color.yellow, lineWidth: 2)
-                    .frame(width: item.rect.width, height: item.rect.height)
+                    .frame(width: max(1, item.rect.width), height: max(1, item.rect.height))
                     .position(x: item.rect.midX, y: item.rect.midY)
             default:
                 EmptyView()

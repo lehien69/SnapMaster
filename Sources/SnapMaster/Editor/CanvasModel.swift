@@ -23,7 +23,7 @@ enum AnnotationTool: String, CaseIterable, Identifiable {
         case .stepNumber: return "Số thứ tự (1, 2, 3)"
         case .text: return "Văn bản"
         case .pen: return "Bút vẽ tự do"
-        case .pixelate: return "Che mờ / Pixelate"
+        case .pixelate: return "Làm mờ / Che mờ (Blur)"
         case .spotlight: return "Spotlight làm tối"
         }
     }
