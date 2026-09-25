@@ -84,7 +84,27 @@
 
 ---
 
-## 🚀 Khởi chạy ứng dụng
+## 🍺 Cài đặt qua Homebrew (Khuyên dùng cho mọi máy Mac)
+
+Bạn có thể cài đặt dễ dàng bằng Terminal trên bất kỳ máy Mac nào thông qua Homebrew Tap chính thức:
+
+```bash
+# Cài đặt bằng 1 dòng lệnh duy nhất (tự động xóa cờ kiểm duyệt Gatekeeper xattr)
+brew install --cask lehien69/tap/snapmaster
+```
+
+Hoặc thêm tap trước:
+```bash
+brew tap lehien69/tap
+brew install --cask snapmaster
+```
+
+> [!TIP]
+> Cask đã tích hợp sẵn lệnh tự động xóa thuộc tính kiểm duyệt của Apple (`xattr -rd com.apple.quarantine` và `xattr -cr`), do đó khi chia sẻ cho các máy Mac khác cài đặt qua Homebrew sẽ mở được ứng dụng ngay lập tức mà **không bị macOS chặn hoặc cảnh báo ứng dụng chưa ký / chưa xác minh**.
+
+---
+
+## 🚀 Khởi chạy ứng dụng thủ công
 
 ### Chạy trực tiếp từ App Bundle:
 ```bash

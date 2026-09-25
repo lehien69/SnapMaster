@@ -128,6 +128,86 @@ with urllib.request.urlopen(req_upload) as resp:
     dl_url = asset_data.get("browser_download_url", "")
     print("✅ Đã upload thành công SnapMaster.zip vào GitHub Release!")
     print(f"🔗 Download URL: {dl_url}")
+
+# 3. Tự động cập nhật Homebrew Cask trong lehien69/homebrew-tap
+import hashlib, base64
+
+sha256 = hashlib.sha256(zip_data).hexdigest()
+print(f"🔑 SHA256 Checksum: {sha256}")
+
+tap_repo = "lehien69/homebrew-tap"
+cask_path = "Casks/snapmaster.rb"
+cask_api_url = f"https://api.github.com/repos/{tap_repo}/contents/{cask_path}"
+
+req_get_cask = urllib.request.Request(
+    cask_api_url,
+    headers={
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json",
+        "User-Agent": "SnapMaster-Release"
+    }
+)
+
+try:
+    cask_sha = None
+    try:
+        with urllib.request.urlopen(req_get_cask) as resp:
+            cask_info = json.loads(resp.read().decode())
+            cask_sha = cask_info.get("sha")
+    except Exception:
+        pass
+
+    cask_content = f"""cask "snapmaster" do
+  version "{version}"
+  sha256 "{sha256}"
+
+  url "https://github.com/lehien69/SnapMaster/releases/download/v#{{version}}/SnapMaster.zip"
+  name "SnapMaster"
+  desc "Modern screen capture, annotation, OCR, QR code scanner and screen recording tool for macOS"
+  homepage "https://github.com/lehien69/SnapMaster"
+
+  auto_updates true
+  depends_on macos: ">= :ventura"
+
+  app "SnapMaster.app"
+
+  postflight do
+    system_command "/usr/bin/xattr",
+                   args: ["-rd", "com.apple.quarantine", "#{{appdir}}/SnapMaster.app"],
+                   must_succeed: false
+    system_command "/usr/bin/xattr",
+                   args: ["-cr", "#{{appdir}}/SnapMaster.app"],
+                   must_succeed: false
+  end
+
+  zap trash: [
+    "~/Library/Preferences/com.snapmaster.app.plist",
+    "~/Library/Application Support/SnapMaster",
+  ]
+end
+"""
+    put_payload = {
+        "message": f"bump(cask): snapmaster v{version}",
+        "content": base64.b64encode(cask_content.encode()).decode()
+    }
+    if cask_sha:
+        put_payload["sha"] = cask_sha
+
+    req_put_cask = urllib.request.Request(
+        cask_api_url,
+        data=json.dumps(put_payload).encode(),
+        method="PUT",
+        headers={
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/vnd.github+json",
+            "User-Agent": "SnapMaster-Release",
+            "Content-Type": "application/json"
+        }
+    )
+    with urllib.request.urlopen(req_put_cask) as resp:
+        print(f"🍺 Đã tự động cập nhật Homebrew Cask v{version} vào {tap_repo}!")
+except Exception as e:
+    print(f"⚠️ Không thể cập nhật Homebrew Cask tự động: {e}")
 '
 
 rm -f "$ZIP_NAME"
